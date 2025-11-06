@@ -8,13 +8,18 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY || '');
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const from = (formData.get('from') as string).match(/<(.*)>/)?.[1] || (formData.get('from') as string);
+  const sender = formData.get('sender') as string || formData.get('from') as string;
   const text = (formData.get('text') as string).toLowerCase().trim();
 
-  const username = await kv.get(`email:${from}`);
+  // The 'from' field can sometimes be in the format "Name <email@example.com>"
+  // We just want the email address
+  const fromEmail = sender.match(/<(.*)>/)?.[1] || sender;
+
+
+  const username = await kv.get(`email:${fromEmail}`);
 
   if (!username) {
-    console.error(`User not found for email: ${from}`);
+    console.error(`User not found for email: ${fromEmail}`);
     return new Response('User not found', { status: 404 });
   }
 
@@ -32,7 +37,7 @@ export async function POST(request: Request) {
     await kv.set(`user:${username}`, { ...user, status: 'in progress', laborStart: eventTime });
 
     const msg = {
-      to: from,
+      to: fromEmail,
       from: process.env.FROM_EMAIL || '',
       subject: 'Status Updated: In Progress',
       html: `
@@ -47,7 +52,7 @@ export async function POST(request: Request) {
     await kv.set(`user:${username}`, { ...user, status: 'no', born: eventTime });
 
     const msg = {
-      to: from,
+      to: fromEmail,
       from: process.env.FROM_EMAIL || '',
       subject: 'Congratulations!',
       html: `

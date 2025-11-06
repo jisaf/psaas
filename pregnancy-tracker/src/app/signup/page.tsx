@@ -26,9 +26,10 @@ export default function SignUp() {
         body: JSON.stringify({ username, email, color }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Something went wrong');
+        throw new Error(data.error || 'Something went wrong');
       }
 
       setSuccess(true);
@@ -55,7 +56,7 @@ export default function SignUp() {
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
         <h1 className="text-2xl font-bold mb-6 text-center">Create Your Account</h1>
         <form onSubmit={handleSubmit}>
-          {error && <p className="text-red-500 mb-4">{error}</p>}
+          {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
           <div className="mb-4">
             <label htmlFor="username" className="block text-gray-700 font-bold mb-2">
               Username
