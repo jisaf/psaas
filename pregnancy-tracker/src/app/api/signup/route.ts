@@ -1,7 +1,7 @@
 // src/app/api/signup/route.ts
-import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
 import sgMail from '@sendgrid/mail';
+import clientPromise from '@/lib/mongodb';
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY || '');
 
@@ -13,19 +13,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const userExists = await kv.exists(`user:${username}`);
+    const client = await clientPromise;
+    const db = client.db();
+    const users = db.collection('users');
 
-    if (userExists) {
-      return NextResponse.json({ error: 'Username already taken' }, { status: 409 });
+    const existingUser = await users.findOne({ $or: [{ username }, { email }] });
+
+    if (existingUser) {
+      if (existingUser.username === username) {
+        return NextResponse.json({ error: 'Username already taken' }, { status: 409 });
+      }
+      if (existingUser.email === email) {
+        return NextResponse.json({ error: 'Email already in use' }, { status: 409 });
+      }
     }
 
-    const emailExists = await kv.get(`email:${email}`);
-    if (emailExists) {
-      return NextResponse.json({ error: 'Email already in use' }, { status: 409 });
-    }
-
-    await kv.set(`user:${username}`, { email, color, status: 'yes' });
-    await kv.set(`email:${email}`, username);
+    await users.insertOne({
+      username,
+      email,
+      color,
+      status: 'yes',
+      createdAt: new Date(),
+    });
 
     const msg = {
       to: email,
@@ -46,7 +55,6 @@ export async function POST(request: Request) {
       await sgMail.send(msg);
     } catch (error) {
       console.error('SendGrid Error:', JSON.stringify(error));
-      // We don't block the user, but we should be aware of the error
     }
 
     return NextResponse.json({ success: true });

@@ -10,9 +10,9 @@
   },
   "dependencies": {
     "@sendgrid/mail": "^8.1.6",
-    "@vercel/kv": "^3.0.0",
     "chrono-node": "^2.9.0",
     "date-fns": "^4.1.0",
+    "mongodb": "^7.0.0",
     "next": "16.0.1",
     "react": "19.2.0",
     "react-dom": "19.2.0"
